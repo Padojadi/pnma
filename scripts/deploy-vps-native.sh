@@ -61,6 +61,15 @@ EOF
 npm install
 NEXT_PUBLIC_API_URL=https://${DOMAIN}/api npm run build
 
+# Standalone Next.js requires static + public next to server.js
+if [ -d .next/standalone ]; then
+  mkdir -p .next/standalone/.next
+  rm -rf .next/standalone/.next/static
+  cp -a .next/static .next/standalone/.next/static
+  rm -rf .next/standalone/public
+  cp -a public .next/standalone/public 2>/dev/null || mkdir -p .next/standalone/public
+fi
+
 # PM2
 npm install -g pm2 2>/dev/null || true
 pm2 delete pnma-api 2>/dev/null || true
@@ -69,10 +78,12 @@ pm2 delete pnma-web 2>/dev/null || true
 cd "$APP_DIR/backend"
 pm2 start dist/src/main.js --name pnma-api --cwd "$APP_DIR/backend"
 
-cd "$APP_DIR/frontend"
-if [ -f .next/standalone/server.js ]; then
-  PORT=${FRONTEND_PORT} HOSTNAME=0.0.0.0 pm2 start .next/standalone/server.js --name pnma-web
+if [ -f "$APP_DIR/frontend/.next/standalone/server.js" ]; then
+  cd "$APP_DIR/frontend/.next/standalone"
+  PORT=${FRONTEND_PORT} HOSTNAME=0.0.0.0 NEXT_PUBLIC_API_URL=https://${DOMAIN}/api \
+    pm2 start server.js --name pnma-web --cwd "$APP_DIR/frontend/.next/standalone"
 else
+  cd "$APP_DIR/frontend"
   PORT=${FRONTEND_PORT} pm2 start npm --name pnma-web -- start
 fi
 pm2 save
