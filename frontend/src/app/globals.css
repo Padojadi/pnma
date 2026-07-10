@@ -1,0 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --night-950: #050d18;
+  --night-900: #071525;
+  --night-800: #0c2340;
+  --signal: #e8a317;
+  --mist: #e8eef6;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-night-950 text-mist font-sans antialiased;
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(232, 163, 23, 0.35);
+}
+
+.road-line {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--signal), transparent);
+}

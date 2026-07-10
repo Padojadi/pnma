@@ -1,0 +1,31 @@
+name: Deploy PNMA to VPS
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.repository == 'Padojadi/pnma'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            export BRANCH=main
+            export ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}"
+            export JWT_SECRET="${{ secrets.JWT_SECRET }}"
+            if [ -f /opt/pnma/scripts/deploy-vps-native.sh ]; then
+              cd /opt/pnma && git pull origin main
+              bash scripts/deploy-vps-native.sh
+            else
+              git clone https://github.com/Padojadi/pnma.git /opt/pnma
+              bash /opt/pnma/scripts/deploy-vps-native.sh
+            fi

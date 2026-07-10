@@ -1,0 +1,328 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  CALL_CENTER
+  SUBSCRIBER
+  PARTNER
+  INSURER
+}
+
+enum OfferLevel {
+  NIVEAU_1
+  NIVEAU_2
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  SUSPENDED
+  EXPIRED
+  CANCELLED
+}
+
+enum PartnerType {
+  MECHANIC
+  TOWING
+  BOTH
+}
+
+enum PartnerStatus {
+  AVAILABLE
+  BUSY
+  OFFLINE
+}
+
+enum IncidentType {
+  BREAKDOWN
+  ACCIDENT
+  FLAT_TIRE
+  BATTERY
+  FUEL
+  LOCKOUT
+  TOWING
+  MEDICAL
+  OTHER
+}
+
+enum IncidentStatus {
+  RECEIVED
+  DISPATCHING
+  ASSIGNED
+  EN_ROUTE
+  ON_SITE
+  RESOLVED
+  CANCELLED
+}
+
+enum Priority {
+  NORMAL
+  HIGH
+  CRITICAL
+}
+
+enum MedicalPrefinanceStatus {
+  REQUESTED
+  APPROVED
+  DISBURSED
+  REIMBURSED
+  REJECTED
+}
+
+enum InsuranceContractStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum TrainingStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  DISPATCH
+  APPROVE
+  REJECT
+  ASSIGN
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  password     String
+  firstName    String
+  lastName     String
+  phone        String?
+  role         UserRole @default(SUBSCRIBER)
+  active       Boolean  @default(true)
+  latitude     Float?
+  longitude    Float?
+  lastLocationAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  subscriberProfile SubscriberProfile?
+  partnerProfile    PartnerProfile?
+  incidentsReported Incident[]          @relation("Reporter")
+  interventions     InterventionUpdate[]
+  medicalRequests   MedicalPrefinance[] @relation("MedicalRequester")
+  medicalApprovals  MedicalPrefinance[] @relation("MedicalApprover")
+  trainings         TrainingEnrollment[]
+  auditLogs         AuditLog[]
+}
+
+model OfferPlan {
+  id                    String     @id @default(uuid())
+  level                 OfferLevel @unique
+  name                  String
+  annualPriceFcfa       Int
+  medicalCeilingFcfa    Int
+  priorityIntervention  Boolean    @default(false)
+  premiumAssistance     Boolean    @default(false)
+  adminSupport          Boolean    @default(false)
+  description           String?
+  active                Boolean    @default(true)
+  subscriptions         Subscription[]
+}
+
+model SubscriberProfile {
+  id             String   @id @default(uuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName    String?
+  isEnterprise   Boolean  @default(false)
+  address        String?
+  city           String   @default("Dakar")
+  vehiclePlate   String?
+  vehicleBrand   String?
+  vehicleModel   String?
+  vehicleYear    Int?
+  emergencyContact String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  subscriptions  Subscription[]
+  insuranceContracts InsuranceContract[]
+}
+
+model Subscription {
+  id           String             @id @default(uuid())
+  subscriberId String
+  subscriber   SubscriberProfile  @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+  offerPlanId  String
+  offerPlan    OfferPlan          @relation(fields: [offerPlanId], references: [id])
+  status       SubscriptionStatus @default(ACTIVE)
+  startedAt    DateTime           @default(now())
+  expiresAt    DateTime
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+model PartnerProfile {
+  id           String        @id @default(uuid())
+  userId       String        @unique
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  businessName String
+  type         PartnerType   @default(MECHANIC)
+  status       PartnerStatus @default(AVAILABLE)
+  city         String        @default("Dakar")
+  address      String?
+  latitude     Float
+  longitude    Float
+  coverageKm   Float         @default(30)
+  rating       Float         @default(4.5)
+  phone        String?
+  specialties  String[]
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  incidents    Incident[]    @relation("AssignedPartner")
+}
+
+model Incident {
+  id               String         @id @default(uuid())
+  reference        String         @unique
+  type             IncidentType
+  status           IncidentStatus @default(RECEIVED)
+  priority         Priority       @default(NORMAL)
+  description      String?
+  latitude         Float
+  longitude        Float
+  address          String?
+  city             String?
+  reporterId       String
+  reporter         User           @relation("Reporter", fields: [reporterId], references: [id])
+  assignedPartnerId String?
+  assignedPartner  PartnerProfile? @relation("AssignedPartner", fields: [assignedPartnerId], references: [id])
+  estimatedEtaMin  Int?
+  distanceKm       Float?
+  resolvedAt       DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  updates          InterventionUpdate[]
+  medicalPrefinance MedicalPrefinance?
+  aiSuggestions    AiSuggestion[]
+}
+
+model InterventionUpdate {
+  id          String   @id @default(uuid())
+  incidentId  String
+  incident    Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  authorId    String?
+  author      User?    @relation(fields: [authorId], references: [id])
+  status      IncidentStatus
+  message     String
+  latitude    Float?
+  longitude   Float?
+  createdAt   DateTime @default(now())
+}
+
+model InsurancePartner {
+  id        String   @id @default(uuid())
+  name      String
+  code      String   @unique
+  phone     String?
+  email     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  contracts InsuranceContract[]
+}
+
+model InsuranceContract {
+  id               String                  @id @default(uuid())
+  reference        String                  @unique
+  subscriberId     String
+  subscriber       SubscriberProfile       @relation(fields: [subscriberId], references: [id])
+  insurerId        String
+  insurer          InsurancePartner        @relation(fields: [insurerId], references: [id])
+  vehiclePlate     String
+  coverageType     String
+  annualPremiumFcfa Int
+  status           InsuranceContractStatus @default(DRAFT)
+  startedAt        DateTime?
+  expiresAt        DateTime?
+  negotiatedByPnma Boolean                 @default(true)
+  notes            String?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+}
+
+model MedicalPrefinance {
+  id              String                   @id @default(uuid())
+  reference       String                   @unique
+  incidentId      String?                  @unique
+  incident        Incident?                @relation(fields: [incidentId], references: [id])
+  requesterId     String
+  requester       User                     @relation("MedicalRequester", fields: [requesterId], references: [id])
+  approverId      String?
+  approver        User?                    @relation("MedicalApprover", fields: [approverId], references: [id])
+  amountFcfa      Int
+  ceilingFcfa     Int
+  hospitalName    String?
+  diagnosis       String?
+  status          MedicalPrefinanceStatus  @default(REQUESTED)
+  notes           String?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+}
+
+model TrainingSession {
+  id          String         @id @default(uuid())
+  title       String
+  description String?
+  city        String
+  location    String?
+  startsAt    DateTime
+  endsAt      DateTime
+  capacity    Int            @default(20)
+  status      TrainingStatus @default(SCHEDULED)
+  createdAt   DateTime       @default(now())
+  enrollments TrainingEnrollment[]
+}
+
+model TrainingEnrollment {
+  id        String          @id @default(uuid())
+  sessionId String
+  session   TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attended  Boolean         @default(false)
+  createdAt DateTime        @default(now())
+
+  @@unique([sessionId, userId])
+}
+
+model AiSuggestion {
+  id         String   @id @default(uuid())
+  incidentId String?
+  incident   Incident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  kind       String
+  payload    Json
+  score      Float?
+  applied    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+model AuditLog {
+  id        String      @id @default(uuid())
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id])
+  action    AuditAction
+  entity    String
+  entityId  String?
+  meta      Json?
+  ipAddress String?
+  createdAt DateTime    @default(now())
+}
