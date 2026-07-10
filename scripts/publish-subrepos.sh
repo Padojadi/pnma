@@ -1,35 +1,30 @@
 #!/bin/bash
-# Publie backend/ et frontend/ vers des dépôts GitHub séparés
+# Publie backend/ et frontend/ vers les branches dédiées du monorepo Padojadi/pnma
+# Branches : pnma-backend, pnma-frontend
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-cd "$ROOT"
+REMOTE_URL="$(cd "$ROOT" && git remote get-url origin)"
 
 publish_subdir() {
   local dir="$1"
-  local repo="$2"
+  local branch="$2"
   local tmpdir
   tmpdir=$(mktemp -d)
 
-  echo "=== Publication de $dir vers $repo ==="
-  cp -r "$dir/." "$tmpdir/"
+  echo "=== Publication de $dir vers branche $branch ==="
+  cp -a "$ROOT/$dir/." "$tmpdir/"
   cd "$tmpdir"
-  git init -b main
+  git init -b "$branch"
   git add -A
-  git -c user.email="padojadi@yahoo.fr" -c user.name="PNMA Bot" commit -m "Initial commit from PNMA monorepo"
-  git remote add origin "https://github.com/$repo.git"
-  git push -u origin main --force
-
-  cd "$ROOT"
+  git -c user.email="padojadi@yahoo.fr" -c user.name="PNMA" commit -m "sync: $dir from monorepo"
+  git remote add origin "$REMOTE_URL"
+  git push -u origin "$branch" --force
   rm -rf "$tmpdir"
-  echo "OK: $repo"
+  echo "OK: https://github.com/Padojadi/pnma/tree/$branch"
 }
 
-# Créer les repos s'ils n'existent pas
-gh repo view Padojadi/pnma-backend >/dev/null 2>&1 || gh repo create Padojadi/pnma-backend --public --description "PNMA Backend API"
-gh repo view Padojadi/pnma-frontend >/dev/null 2>&1 || gh repo create Padojadi/pnma-frontend --public --description "PNMA Frontend"
+publish_subdir "backend" "pnma-backend"
+publish_subdir "frontend" "pnma-frontend"
 
-publish_subdir "backend" "Padojadi/pnma-backend"
-publish_subdir "frontend" "Padojadi/pnma-frontend"
-
-echo "Dépôts séparés publiés."
+echo "Branches séparées publiées."

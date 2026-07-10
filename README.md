@@ -53,11 +53,13 @@ bash scripts/deploy-vps-native.sh
 
 Le script configure Nginx, PM2, PostgreSQL et un **certificat SSL séparé** via Certbot pour `pnma.2ticglobal.com`.
 
-## Repos
+## Repos / branches
 
 - Monorepo : https://github.com/Padojadi/pnma
-- Backend : https://github.com/Padojadi/pnma-backend
-- Frontend : https://github.com/Padojadi/pnma-frontend
+- Backend (branche) : https://github.com/Padojadi/pnma/tree/pnma-backend
+- Frontend (branche) : https://github.com/Padojadi/pnma/tree/pnma-frontend
+
+Publier les sous-projets : `bash scripts/publish-subrepos.sh`
 
 ## Copie locale Mac
 
