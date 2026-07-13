@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pnma
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pnma_secret_2026}
+      POSTGRES_DB: pnma
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pnma']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    ports:
+      - '5433:5432'
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://pnma:${POSTGRES_PASSWORD:-pnma_secret_2026}@postgres:5432/pnma?schema=public
+      JWT_SECRET: ${JWT_SECRET:-change-me-pnma-jwt-production}
+      JWT_EXPIRES_IN: 7d
+      PORT: 4010
+      CORS_ORIGIN: https://pnma.2ticglobal.com,http://localhost:3010,http://localhost:3000
+      ADMIN_EMAIL: admin@pnma.2ticglobal.com
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-PnmaAdmin!2026}
+    expose:
+      - '4010'
+    ports:
+      - '4010:4010'
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://pnma.2ticglobal.com/api}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://pnma.2ticglobal.com/api}
+    expose:
+      - '3000'
+    ports:
+      - '3010:3000'
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - '8088:80'
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - certbot_www:/var/www/certbot:ro
+    depends_on:
+      - frontend
+      - backend
+
+volumes:
+  postgres_data:
+  certbot_www:
