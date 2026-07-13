@@ -15,10 +15,10 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main>
+    <main id="contenu-principal" tabIndex={-1}>
       <SiteHeader />
 
-      <section className="relative min-h-screen overflow-hidden bg-road-glow">
+      <section className="relative min-h-screen overflow-hidden bg-road-glow" aria-label="Accueil PNMA">
         <div className="pointer-events-none absolute inset-0 bg-asphalt opacity-80" />
         <div className="pointer-events-none absolute inset-x-0 bottom-24 h-px">
           <div className="road-line mx-auto w-4/5 animate-pulse-line" />

@@ -67,6 +67,11 @@ Publier les sous-projets : `bash scripts/publish-subrepos.sh`
 bash scripts/setup-local.sh "/Users/Paul Do Mac Folders/Protosen_Hostinger/PNMA"
 ```
 
+## Documentation
+
+- Plan MVP 90 jours : [`docs/MVP-90-JOURS.md`](docs/MVP-90-JOURS.md)
+- Backlog accessibilité RA : [`docs/BACKLOG-ACCESSIBILITE.md`](docs/BACKLOG-ACCESSIBILITE.md)
+
 ## Vision (extrait résumé exécutif)
 
 Devenir la référence nationale puis régionale de l’assistance routière et de la protection du conducteur — couverture progressive Dakar → Thiès → nationale, modèle d’abonnement récurrent.

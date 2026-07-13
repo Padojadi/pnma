@@ -5,7 +5,9 @@ import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SiteHeader } from '@/components/SiteChrome';
 import { CallChronogram } from '@/components/CallChronogram';
+import { A11yToolbar } from '@/components/A11yProvider';
 import { api, getStoredUser, statusLabel, typeLabel, type Catalog } from '@/lib/api';
+import { useRaShortcuts } from '@/hooks/useRaShortcuts';
 
 const TYPES = [
   { value: 'BREAKDOWN', label: 'Panne de véhicule', domain: 'ASSISTANCE' },
@@ -62,6 +64,15 @@ export default function AssistancePage() {
     }
   }, [router]);
 
+  useRaShortcuts({
+    onNewAssistance: () => {
+      document.getElementById('type-incident')?.focus();
+    },
+    onFocusMain: () => {
+      document.getElementById('contenu-principal')?.focus();
+    },
+  });
+
   const selected = TYPES.find((t) => t.value === type);
 
   async function onSubmit(e: FormEvent) {
@@ -100,9 +111,12 @@ export default function AssistancePage() {
   }
 
   return (
-    <main className="min-h-screen bg-night-950">
+    <main id="contenu-principal" className="min-h-screen bg-night-950" tabIndex={-1}>
       <SiteHeader solid />
       <div className="mx-auto max-w-3xl px-5 py-28">
+        <div className="mb-6">
+          <A11yToolbar />
+        </div>
         <h1 className="font-display text-5xl uppercase text-white">Demande d’assistance</h1>
         <p className="mt-3 text-mist/70">
           Rubriques contractuelles : Assistance → Secours → Médical. Géolocalisation active.
@@ -149,10 +163,11 @@ export default function AssistancePage() {
           </div>
         ) : (
           <form onSubmit={onSubmit} className="mt-8 space-y-4">
-            <label className="block text-sm text-mist/70">
+            <label className="block text-sm text-mist/70" htmlFor="type-incident">
               Type d’incident / rubrique
               <select
-                className="mt-1 w-full border border-white/15 bg-night-900 px-3 py-3 outline-none focus:border-signal-500"
+                id="type-incident"
+                className="ra-hit mt-1 w-full border border-white/15 bg-night-900 px-3 py-3 outline-none focus:border-signal-500"
                 value={type}
                 onChange={(e) => setType(e.target.value)}
               >
@@ -209,7 +224,7 @@ export default function AssistancePage() {
             <button
               type="submit"
               disabled={loading}
-              className="bg-signal-500 px-6 py-3 font-semibold text-night-950 hover:bg-signal-400 disabled:opacity-60"
+              className="ra-hit bg-signal-500 px-6 py-3 font-semibold text-night-950 hover:bg-signal-400 disabled:opacity-60"
             >
               {loading ? 'Traitement…' : 'Envoyer au centre PNMA'}
             </button>

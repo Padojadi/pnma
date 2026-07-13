@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { A11yRoot } from '@/components/A11yRoot';
 
 export const metadata: Metadata = {
   title: 'PNMA — Plateforme Numérique de Mobilité et d’Assistance',
@@ -10,7 +11,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr">
-      <body>{children}</body>
+      <body>
+        <A11yRoot>{children}</A11yRoot>
+      </body>
     </html>
   );
 }

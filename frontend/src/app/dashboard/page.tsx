@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { SiteHeader } from '@/components/SiteChrome';
 import { CallChronogram } from '@/components/CallChronogram';
+import { A11yToolbar } from '@/components/A11yProvider';
 import {
   api,
   clearAuth,
@@ -82,9 +83,12 @@ export default function DashboardPage() {
   const isLead = user.role === 'ADMIN' || user.role === 'TEAM_LEAD';
 
   return (
-    <main className="min-h-screen bg-night-950">
+    <main id="contenu-principal" className="min-h-screen bg-night-950" tabIndex={-1}>
       <SiteHeader solid />
       <div className="mx-auto max-w-6xl px-5 py-28">
+        <div className="mb-6">
+          <A11yToolbar />
+        </div>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm uppercase tracking-[0.2em] text-signal-400">{user.role.replace('_', ' ')}</p>
