@@ -1,9 +1,21 @@
-import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
-import { IncidentStatus, IncidentType, Priority } from '@prisma/client';
+import { IsArray, IsBoolean, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import {
+  IncidentDomain,
+  IncidentStatus,
+  IncidentType,
+  MedicalMeasure,
+  Priority,
+  RescueAction,
+  RescueCategory,
+} from '@prisma/client';
 
 export class CreateIncidentDto {
   @IsEnum(IncidentType)
   type!: IncidentType;
+
+  @IsOptional()
+  @IsEnum(IncidentDomain)
+  domain?: IncidentDomain;
 
   @IsOptional()
   @IsString()
@@ -24,12 +36,24 @@ export class CreateIncidentDto {
   city?: string;
 
   @IsOptional()
+  @IsString()
+  region?: string;
+
+  @IsOptional()
   @IsEnum(Priority)
   priority?: Priority;
 
   @IsOptional()
   @IsString()
   reporterId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  confirmedBreakdown?: boolean;
+
+  @IsOptional()
+  @IsString()
+  redirectService?: string;
 }
 
 export class UpdateIncidentStatusDto {
@@ -56,4 +80,38 @@ export class AssignPartnerDto {
   @IsOptional()
   @IsString()
   message?: string;
+}
+
+export class AddRescueActionDto {
+  @IsEnum(RescueCategory)
+  category!: RescueCategory;
+
+  @IsEnum(RescueAction)
+  action!: RescueAction;
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  completed?: boolean;
+}
+
+export class AddMedicalMeasureDto {
+  @IsEnum(MedicalMeasure)
+  measure!: MedicalMeasure;
+
+  @IsOptional()
+  @IsString()
+  notes?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  completed?: boolean;
+}
+
+export class BulkMedicalMeasuresDto {
+  @IsArray()
+  measures!: MedicalMeasure[];
 }

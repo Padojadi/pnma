@@ -1,6 +1,6 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4010/api';
 
-export type UserRole = 'ADMIN' | 'CALL_CENTER' | 'SUBSCRIBER' | 'PARTNER' | 'INSURER';
+export type UserRole = 'ADMIN' | 'CALL_CENTER' | 'SUBSCRIBER' | 'PARTNER' | 'INSURER' | 'TEAM_LEAD';
 
 export interface User {
   id: string;
@@ -15,11 +15,17 @@ export interface User {
   subscriberProfile?: {
     id: string;
     city?: string;
+    region?: string;
     vehiclePlate?: string;
     isEnterprise?: boolean;
     subscriptions?: Array<{
       status: string;
-      offerPlan?: { name: string; level: string; medicalCeilingFcfa: number };
+      offerPlan?: {
+        name: string;
+        level: string;
+        medicalCeilingFcfa: number;
+        replacementVehicleIncluded?: boolean;
+      };
     }>;
   };
   partnerProfile?: {
@@ -40,12 +46,14 @@ export interface OfferPlan {
   priorityIntervention: boolean;
   premiumAssistance: boolean;
   adminSupport: boolean;
+  replacementVehicleIncluded?: boolean;
   description?: string;
 }
 
 export interface Incident {
   id: string;
   reference: string;
+  domain?: string;
   type: string;
   status: string;
   priority: string;
@@ -54,13 +62,18 @@ export interface Incident {
   longitude: number;
   address?: string;
   city?: string;
+  region?: string;
   estimatedEtaMin?: number;
   distanceKm?: number;
+  replacementEligible?: boolean;
+  redirectedService?: string;
   createdAt: string;
   resolvedAt?: string;
   reporter?: { firstName: string; lastName: string; phone?: string };
   assignedPartner?: { businessName: string; user?: { phone?: string } };
   updates?: Array<{ status: string; message: string; createdAt: string }>;
+  rescueActions?: Array<{ id: string; category: string; action: string; completed: boolean }>;
+  medicalMeasures?: Array<{ id: string; measure: string; completed: boolean }>;
 }
 
 export interface Partner {
@@ -77,6 +90,34 @@ export interface Partner {
   distanceKm?: number;
 }
 
+export interface FluxMedical {
+  label: string;
+  region: string;
+  month: {
+    amountFcfa: number;
+    objectiveFcfa: number;
+    pctOfObjective: number;
+    cases: number;
+    remainingFcfa: number;
+  };
+  year: {
+    amountFcfa: number;
+    objectiveFcfa: number;
+    pctOfObjective: number;
+    cases: number;
+    remainingFcfa: number;
+  };
+  incidence: {
+    regionalCases: number;
+    regionalSubscribers: number;
+    regionalRatePct: number;
+    nationalCases: number;
+    nationalSubscribers: number;
+    nationalRatePct: number;
+  };
+  narrative: string;
+}
+
 export interface DashboardData {
   kpis: {
     subscribers: number;
@@ -88,17 +129,57 @@ export interface DashboardData {
     avgEtaMin: number;
     avgResolutionMin: number;
     medicalRequests: number;
+    medicalFluxFcfa: number;
     medicalVolumeFcfa: number;
     medicalApprovedFcfa: number;
     activeSubscriptions: number;
     insuranceContracts: number;
     trainings: number;
+    openCalls?: number;
+    exceededCalls?: number;
+  };
+  fluxMedical?: FluxMedical;
+  localNational?: {
+    subscribersByRegion: Array<{ region: string; count: number; shareNationalPct: number }>;
+    medicalByRegion: Array<{ region: string; cases: number; amountFcfa: number; shareNationalPct: number }>;
+    narrative: string;
   };
   byType: Array<{ type: string; _count: number }>;
   byCity: Array<{ city: string | null; _count: number }>;
   byStatus: Array<{ status: string; _count: number }>;
+  byDomain?: Array<{ domain: string; _count: number }>;
   recentIncidents: Incident[];
   growthTargets: Array<{ year: number; subscribers: number; coverage: string[] }>;
+  incidentCatalog?: Catalog;
+}
+
+export interface Catalog {
+  domains: Array<{
+    domain: string;
+    label: string;
+    rubrics: Array<Record<string, unknown>>;
+  }>;
+}
+
+export interface CallSession {
+  id: string;
+  reference: string;
+  packetMinutes: number;
+  packetsUsed: number;
+  elapsedSec: number;
+  countdownRemain: number;
+  exceeded: boolean;
+  status: string;
+  decision?: string;
+  chronogram?: {
+    countdownRemain: number;
+    elapsedSec: number;
+    packetsUsed: number;
+    packetMinutes: number;
+    exceeded: boolean;
+  };
+  agent?: { firstName: string; lastName: string };
+  incident?: { reference: string; type: string; city?: string };
 }
 
 function getToken() {
@@ -150,6 +231,7 @@ export const api = {
     }),
   me: () => request<User>('/auth/me'),
   offers: () => request<OfferPlan[]>('/offers'),
+  catalog: () => request<Catalog>('/analytics/catalog'),
   partners: (params?: string) => request<Partner[]>(`/partners${params ? `?${params}` : ''}`),
   nearestPartner: (lat: number, lng: number, type?: string) =>
     request<{ nearest: Partner | null; candidates: Partner[] }>(
@@ -158,11 +240,21 @@ export const api = {
   incidents: (params?: string) => request<Incident[]>(`/incidents${params ? `?${params}` : ''}`),
   incident: (id: string) => request<Incident>(`/incidents/${id}`),
   createIncident: (data: Record<string, unknown>) =>
-    request<{ incident: Incident }>('/incidents', { method: 'POST', body: JSON.stringify(data) }),
+    request<{ incident: Incident; redirected?: boolean }>('/incidents', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   updateIncidentStatus: (id: string, data: Record<string, unknown>) =>
     request<Incident>(`/incidents/${id}/status`, { method: 'PATCH', body: JSON.stringify(data) }),
   autoDispatch: (id: string) => request<{ incident: Incident }>(`/incidents/${id}/auto-dispatch`, { method: 'POST' }),
-  dashboard: () => request<DashboardData>('/analytics/dashboard'),
+  addRescueAction: (id: string, data: Record<string, unknown>) =>
+    request(`/incidents/${id}/rescue-actions`, { method: 'POST', body: JSON.stringify(data) }),
+  addMedicalMeasure: (id: string, data: Record<string, unknown>) =>
+    request(`/incidents/${id}/medical-measures`, { method: 'POST', body: JSON.stringify(data) }),
+  dashboard: (region?: string) =>
+    request<DashboardData>(`/analytics/dashboard${region ? `?region=${encodeURIComponent(region)}` : ''}`),
+  fluxMedical: (region?: string) =>
+    request<FluxMedical>(`/analytics/flux-medical${region ? `?region=${encodeURIComponent(region)}` : ''}`),
   medical: () => request<Array<Record<string, unknown>>>('/medical'),
   createMedical: (data: Record<string, unknown>) =>
     request<Record<string, unknown>>('/medical', { method: 'POST', body: JSON.stringify(data) }),
@@ -181,6 +273,15 @@ export const api = {
   aiSuggestions: () => request<Array<Record<string, unknown>>>('/ai/suggestions'),
   updateLocation: (latitude: number, longitude: number) =>
     request('/users/me/location', { method: 'PATCH', body: JSON.stringify({ latitude, longitude }) }),
+  startCall: (data: Record<string, unknown>) =>
+    request<CallSession>('/calls', { method: 'POST', body: JSON.stringify(data) }),
+  tickCall: (id: string, elapsedSec: number) =>
+    request<CallSession>(`/calls/${id}/tick`, { method: 'PATCH', body: JSON.stringify({ elapsedSec }) }),
+  addCallPacket: (id: string) => request<CallSession>(`/calls/${id}/add-packet`, { method: 'POST' }),
+  closeCall: (id: string, data: Record<string, unknown>) =>
+    request<CallSession>(`/calls/${id}/close`, { method: 'PATCH', body: JSON.stringify(data) }),
+  teamLeadCalls: () => request<CallSession[]>('/calls/team-lead'),
+  calls: (params?: string) => request<CallSession[]>(`/calls${params ? `?${params}` : ''}`),
 };
 
 export function formatFcfa(n: number) {
@@ -196,6 +297,7 @@ export function statusLabel(status: string) {
     ON_SITE: 'Sur place',
     RESOLVED: 'Résolu',
     CANCELLED: 'Annulé',
+    REDIRECTED: 'Redirigé',
     AVAILABLE: 'Disponible',
     BUSY: 'Occupé',
     OFFLINE: 'Hors ligne',
@@ -203,6 +305,32 @@ export function statusLabel(status: string) {
     APPROVED: 'Approuvé',
     DISBURSED: 'Décaissé',
     REJECTED: 'Rejeté',
+    OPEN: 'Ouvert',
+    CLOSED: 'Clos',
   };
   return map[status] || status;
+}
+
+export function typeLabel(type: string) {
+  const map: Record<string, string> = {
+    BREAKDOWN: 'Panne de véhicule',
+    REMOTE_DIAGNOSIS: 'Diagnostic à distance',
+    ON_SITE_REPAIR: 'Dépannage sur site',
+    EVACUATION: 'Évacuation',
+    REPLACEMENT_VEHICLE: 'Véhicule de remplacement',
+    RESCUE: 'Secours',
+    MEDICAL: 'Médical',
+    ACCIDENT: 'Accident',
+    FLAT_TIRE: 'Crevaison',
+    BATTERY: 'Batterie',
+    TOWING: 'Remorquage',
+    OTHER: 'Autre',
+  };
+  return map[type] || type;
+}
+
+export function formatDuration(sec: number) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }

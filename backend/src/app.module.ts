@@ -12,6 +12,7 @@ import { TrainingModule } from './training/training.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AiModule } from './ai/ai.module';
 import { OffersModule } from './offers/offers.module';
+import { CallsModule } from './calls/calls.module';
 import { JwtAuthGuard } from './common/auth.guard';
 import { RolesGuard } from './common/roles.guard';
 
@@ -29,6 +30,7 @@ import { RolesGuard } from './common/roles.guard';
     AnalyticsModule,
     AiModule,
     OffersModule,
+    CallsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },

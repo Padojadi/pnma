@@ -99,6 +99,7 @@ export default function ConnexionPage() {
           <p>Comptes démo :</p>
           <p>admin@pnma.2ticglobal.com / PnmaAdmin!2026</p>
           <p>callcenter@pnma.2ticglobal.com / CallCenter!2026</p>
+          <p>chef@pnma.2ticglobal.com / TeamLead!2026</p>
           <p>abonne@pnma.2ticglobal.com / Abonne!2026</p>
           <Link href="/" className="mt-3 inline-block text-signal-400">
             ← Retour

@@ -20,7 +20,7 @@ async function main() {
 
   const niveau1 = await prisma.offerPlan.upsert({
     where: { level: OfferLevel.NIVEAU_1 },
-    update: {},
+    update: { replacementVehicleIncluded: false },
     create: {
       level: OfferLevel.NIVEAU_1,
       name: 'Offre Niveau 1',
@@ -29,13 +29,14 @@ async function main() {
       priorityIntervention: false,
       premiumAssistance: false,
       adminSupport: false,
+      replacementVehicleIncluded: false,
       description: 'Assistance téléphonique 24/7, coordination dépannage, réseau de garages, préfinancement médical plafonné à 200 000 FCFA.',
     },
   });
 
   const niveau2 = await prisma.offerPlan.upsert({
     where: { level: OfferLevel.NIVEAU_2 },
-    update: {},
+    update: { replacementVehicleIncluded: true },
     create: {
       level: OfferLevel.NIVEAU_2,
       name: 'Offre Niveau 2',
@@ -44,7 +45,8 @@ async function main() {
       priorityIntervention: true,
       premiumAssistance: true,
       adminSupport: true,
-      description: 'Priorité d’intervention, assistance premium, accompagnement administratif, préfinancement médical plafonné à 500 000 FCFA.',
+      replacementVehicleIncluded: true,
+      description: 'Priorité d’intervention, assistance premium, véhicule de remplacement, préfinancement médical plafonné à 500 000 FCFA.',
     },
   });
 
@@ -76,6 +78,32 @@ async function main() {
     },
   });
 
+  const leadHash = await bcrypt.hash('TeamLead!2026', 10);
+  await prisma.user.upsert({
+    where: { email: 'chef@pnma.2ticglobal.com' },
+    update: {},
+    create: {
+      email: 'chef@pnma.2ticglobal.com',
+      password: leadHash,
+      firstName: 'Ibrahima',
+      lastName: 'Sarr',
+      phone: '+221770000003',
+      role: UserRole.TEAM_LEAD,
+    },
+  });
+
+  const year = new Date().getFullYear();
+  const month = new Date().getMonth() + 1;
+  await prisma.medicalBudgetConfig.deleteMany({ where: { year } });
+  await prisma.medicalBudgetConfig.createMany({
+    data: [
+      { year, month, region: null, objectiveFcfa: 5_000_000, label: 'Objectif mensuel national flux médical' },
+      { year, month: null, region: null, objectiveFcfa: 50_000_000, label: 'Objectif annuel national flux médical' },
+      { year, month, region: 'Dakar', objectiveFcfa: 3_000_000, label: 'Objectif mensuel Dakar' },
+      { year, month, region: 'Thiès', objectiveFcfa: 1_000_000, label: 'Objectif mensuel Thiès' },
+    ],
+  });
+
   const subHash = await bcrypt.hash('Abonne!2026', 10);
   const subscriber = await prisma.user.upsert({
     where: { email: 'abonne@pnma.2ticglobal.com' },
@@ -93,6 +121,7 @@ async function main() {
       subscriberProfile: {
         create: {
           city: 'Dakar',
+          region: 'Dakar',
           address: 'Almadies, Dakar',
           vehiclePlate: 'DK-4521-AB',
           vehicleBrand: 'Toyota',
@@ -262,6 +291,7 @@ async function main() {
   console.log('PNMA seed OK');
   console.log(`Admin: ${adminEmail} / ${adminPassword}`);
   console.log('Call center: callcenter@pnma.2ticglobal.com / CallCenter!2026');
+  console.log('Chef équipe: chef@pnma.2ticglobal.com / TeamLead!2026');
   console.log('Abonné: abonne@pnma.2ticglobal.com / Abonne!2026');
   console.log(`Offers: ${niveau1.name}, ${niveau2.name}`);
   console.log(`Admin id: ${admin.id}`);
